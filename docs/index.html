@@ -1,0 +1,518 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Fren — Android Control Center for macOS</title>
+    <style>
+        :root {
+            --bg: #0a0a0f;
+            --surface: rgba(255, 255, 255, 0.05);
+            --surface-hover: rgba(255, 255, 255, 0.08);
+            --border: rgba(255, 255, 255, 0.08);
+            --text: #f0f0f5;
+            --text-dim: #888899;
+            --accent: #7c6aff;
+            --accent-glow: rgba(124, 106, 255, 0.3);
+            --orange: #ff9f43;
+            --indigo: #7c6aff;
+            --blue: #5b9df9;
+            --mint: #5cdbb5;
+            --pink: #f76e8a;
+            --yellow: #ffd56b;
+            --green: #5cdbb5;
+            --red: #f76e8a;
+            --purple: #b07cf7;
+        }
+
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, "SF Pro Display", "Helvetica Neue", sans-serif;
+            background: var(--bg);
+            color: var(--text);
+            line-height: 1.6;
+            overflow-x: hidden;
+        }
+
+        /* Ambient background glow */
+        body::before {
+            content: "";
+            position: fixed;
+            top: -40%; left: -20%;
+            width: 140%; height: 140%;
+            background:
+                radial-gradient(ellipse at 30% 20%, rgba(124, 106, 255, 0.08) 0%, transparent 60%),
+                radial-gradient(ellipse at 70% 60%, rgba(91, 157, 249, 0.06) 0%, transparent 50%),
+                radial-gradient(ellipse at 50% 90%, rgba(247, 110, 138, 0.05) 0%, transparent 50%);
+            pointer-events: none;
+            z-index: 0;
+        }
+
+        .container {
+            max-width: 860px;
+            margin: 0 auto;
+            padding: 0 24px;
+            position: relative;
+            z-index: 1;
+        }
+
+        /* Hero */
+        .hero {
+            text-align: center;
+            padding: 100px 0 60px;
+        }
+
+        .hero-icon {
+            width: 80px; height: 80px;
+            background: linear-gradient(135deg, var(--indigo), var(--blue));
+            border-radius: 20px;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 40px;
+            margin-bottom: 32px;
+            box-shadow: 0 8px 40px var(--accent-glow);
+        }
+
+        h1 {
+            font-size: 56px;
+            font-weight: 700;
+            letter-spacing: -1.5px;
+            margin-bottom: 16px;
+            background: linear-gradient(135deg, #fff 0%, #ccc 100%);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+
+        .tagline {
+            font-size: 20px;
+            color: var(--text-dim);
+            max-width: 500px;
+            margin: 0 auto 40px;
+            font-weight: 400;
+        }
+
+        .cta-group {
+            display: flex;
+            gap: 12px;
+            justify-content: center;
+            flex-wrap: wrap;
+        }
+
+        .btn {
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            padding: 14px 28px;
+            border-radius: 12px;
+            font-size: 15px;
+            font-weight: 600;
+            text-decoration: none;
+            transition: all 0.2s;
+        }
+
+        .btn-primary {
+            background: var(--accent);
+            color: #fff;
+            box-shadow: 0 4px 20px var(--accent-glow);
+        }
+
+        .btn-primary:hover {
+            transform: translateY(-1px);
+            box-shadow: 0 6px 30px var(--accent-glow);
+        }
+
+        .btn-secondary {
+            background: var(--surface);
+            color: var(--text);
+            border: 1px solid var(--border);
+        }
+
+        .btn-secondary:hover {
+            background: var(--surface-hover);
+            transform: translateY(-1px);
+        }
+
+        /* Grid demo */
+        .grid-demo {
+            padding: 40px 0 80px;
+            display: flex;
+            justify-content: center;
+        }
+
+        .phone-frame {
+            background: rgba(255, 255, 255, 0.03);
+            border: 1px solid var(--border);
+            border-radius: 24px;
+            padding: 24px 20px 20px;
+            backdrop-filter: blur(20px);
+            box-shadow: 0 20px 80px rgba(0, 0, 0, 0.4);
+        }
+
+        .drag-pill {
+            width: 36px; height: 5px;
+            background: rgba(255, 255, 255, 0.2);
+            border-radius: 3px;
+            margin: 0 auto 16px;
+        }
+
+        .tile-grid {
+            display: grid;
+            grid-template-columns: repeat(4, 64px);
+            gap: 10px;
+        }
+
+        .tile {
+            width: 64px; height: 58px;
+            border-radius: 14px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            gap: 4px;
+            background: rgba(255, 255, 255, 0.04);
+            border: 1px solid rgba(255, 255, 255, 0.06);
+            transition: all 0.3s;
+            cursor: default;
+        }
+
+        .tile:hover {
+            background: rgba(255, 255, 255, 0.08);
+            transform: scale(1.05);
+        }
+
+        .tile.active { background: rgba(255, 255, 255, 0.08); }
+
+        .tile-icon { font-size: 20px; line-height: 1; }
+        .tile-label { font-size: 9px; font-weight: 500; color: var(--text-dim); }
+        .tile.active .tile-label { color: var(--text); }
+
+        /* Features */
+        .features {
+            padding: 60px 0;
+        }
+
+        .features h2 {
+            font-size: 36px;
+            font-weight: 700;
+            letter-spacing: -0.5px;
+            text-align: center;
+            margin-bottom: 48px;
+        }
+
+        .feature-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+            gap: 16px;
+        }
+
+        .feature-card {
+            background: var(--surface);
+            border: 1px solid var(--border);
+            border-radius: 16px;
+            padding: 24px;
+            transition: all 0.2s;
+        }
+
+        .feature-card:hover {
+            background: var(--surface-hover);
+            transform: translateY(-2px);
+        }
+
+        .feature-card .icon {
+            font-size: 28px;
+            margin-bottom: 12px;
+        }
+
+        .feature-card h3 {
+            font-size: 16px;
+            font-weight: 600;
+            margin-bottom: 6px;
+        }
+
+        .feature-card p {
+            font-size: 14px;
+            color: var(--text-dim);
+            line-height: 1.5;
+        }
+
+        /* Controls list */
+        .controls {
+            padding: 60px 0;
+        }
+
+        .controls h2 {
+            font-size: 36px;
+            font-weight: 700;
+            letter-spacing: -0.5px;
+            text-align: center;
+            margin-bottom: 16px;
+        }
+
+        .controls-subtitle {
+            text-align: center;
+            color: var(--text-dim);
+            margin-bottom: 40px;
+            font-size: 16px;
+        }
+
+        .control-columns {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 24px;
+        }
+
+        .control-group h3 {
+            font-size: 13px;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            color: var(--accent);
+            margin-bottom: 16px;
+        }
+
+        .control-group ul {
+            list-style: none;
+        }
+
+        .control-group li {
+            padding: 8px 0;
+            font-size: 15px;
+            color: var(--text-dim);
+            border-bottom: 1px solid var(--border);
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .control-group li span.ci {
+            font-size: 16px;
+            width: 24px;
+            text-align: center;
+        }
+
+        /* Requirements */
+        .requirements {
+            padding: 60px 0;
+            text-align: center;
+        }
+
+        .requirements h2 {
+            font-size: 36px;
+            font-weight: 700;
+            letter-spacing: -0.5px;
+            margin-bottom: 32px;
+        }
+
+        .req-pills {
+            display: flex;
+            gap: 12px;
+            justify-content: center;
+            flex-wrap: wrap;
+        }
+
+        .req-pill {
+            background: var(--surface);
+            border: 1px solid var(--border);
+            border-radius: 100px;
+            padding: 10px 20px;
+            font-size: 14px;
+            color: var(--text-dim);
+        }
+
+        /* Footer */
+        footer {
+            padding: 40px 0;
+            text-align: center;
+            color: var(--text-dim);
+            font-size: 13px;
+            border-top: 1px solid var(--border);
+        }
+
+        footer a { color: var(--accent); text-decoration: none; }
+        footer a:hover { text-decoration: underline; }
+
+        @media (max-width: 600px) {
+            h1 { font-size: 36px; }
+            .tagline { font-size: 17px; }
+            .control-columns { grid-template-columns: 1fr; }
+            .tile-grid { grid-template-columns: repeat(4, 56px); gap: 8px; }
+            .tile { width: 56px; height: 50px; }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <section class="hero">
+            <div class="hero-icon">📱</div>
+            <h1>Fren</h1>
+            <p class="tagline">A tiny Control Center for your Android device, right on your Mac.</p>
+            <div class="cta-group">
+                <a href="https://github.com/kihaki/fren/releases/latest" class="btn btn-primary">
+                    ⬇ Download DMG
+                </a>
+                <a href="https://github.com/kihaki/fren" class="btn btn-secondary">
+                    View on GitHub
+                </a>
+            </div>
+        </section>
+
+        <section class="grid-demo">
+            <div class="phone-frame">
+                <div class="drag-pill"></div>
+                <div class="tile-grid">
+                    <div class="tile active">
+                        <span class="tile-icon" style="color: var(--indigo)">🌙</span>
+                        <span class="tile-label">Dark</span>
+                    </div>
+                    <div class="tile active">
+                        <span class="tile-icon" style="color: var(--blue)">📶</span>
+                        <span class="tile-label">Wi-Fi</span>
+                    </div>
+                    <div class="tile">
+                        <span class="tile-icon" style="color: var(--text-dim)">ᛒ</span>
+                        <span class="tile-label">BT</span>
+                    </div>
+                    <div class="tile active">
+                        <span class="tile-icon" style="color: var(--purple)">🔄</span>
+                        <span class="tile-label">Rotate</span>
+                    </div>
+                    <div class="tile">
+                        <span class="tile-icon" style="color: var(--text-dim)">👆</span>
+                        <span class="tile-label">Taps</span>
+                    </div>
+                    <div class="tile active">
+                        <span class="tile-icon" style="color: var(--yellow)">⚡</span>
+                        <span class="tile-label">Awake</span>
+                    </div>
+                    <div class="tile">
+                        <span class="tile-icon" style="color: var(--text-dim)">🌙</span>
+                        <span class="tile-label">DND</span>
+                    </div>
+                    <div class="tile active">
+                        <span class="tile-icon" style="color: var(--blue)">📍</span>
+                        <span class="tile-label">Location</span>
+                    </div>
+                    <div class="tile">
+                        <span class="tile-icon" style="color: var(--text-dim)">▢</span>
+                        <span class="tile-label">Bounds</span>
+                    </div>
+                    <div class="tile">
+                        <span class="tile-icon" style="color: var(--pink)">📸</span>
+                        <span class="tile-label">Shot</span>
+                    </div>
+                    <div class="tile">
+                        <span class="tile-icon" style="color: var(--text-dim)">⚙</span>
+                        <span class="tile-label">Settings</span>
+                    </div>
+                    <div class="tile">
+                        <span class="tile-icon" style="color: var(--red)">🔒</span>
+                        <span class="tile-label">Lock</span>
+                    </div>
+                    <div class="tile">
+                        <span class="tile-icon" style="color: var(--orange)">🏠</span>
+                        <span class="tile-label">Home</span>
+                    </div>
+                    <div class="tile">
+                        <span class="tile-icon" style="color: var(--text-dim)">◂</span>
+                        <span class="tile-label">Back</span>
+                    </div>
+                    <div class="tile">
+                        <span class="tile-icon" style="color: var(--purple)">☷</span>
+                        <span class="tile-label">Recents</span>
+                    </div>
+                    <div class="tile">
+                        <span class="tile-icon" style="color: var(--red)">↻</span>
+                        <span class="tile-label">Reboot</span>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <section class="features">
+            <h2>Why Fren?</h2>
+            <div class="feature-grid">
+                <div class="feature-card">
+                    <div class="icon">⚡</div>
+                    <h3>One Click</h3>
+                    <p>Toggle settings instantly. No digging through Android menus or remembering ADB commands.</p>
+                </div>
+                <div class="feature-card">
+                    <div class="icon">🔮</div>
+                    <h3>Liquid Glass</h3>
+                    <p>Native macOS 26 Liquid Glass design. Looks and feels like it belongs on your desktop.</p>
+                </div>
+                <div class="feature-card">
+                    <div class="icon">📡</div>
+                    <h3>Live State</h3>
+                    <p>Toggles reflect actual device state in real-time. Always know what's on and what's off.</p>
+                </div>
+                <div class="feature-card">
+                    <div class="icon">🪶</div>
+                    <h3>Tiny Footprint</h3>
+                    <p>No dock icon. Lives in your menu bar. A floating widget you can park anywhere.</p>
+                </div>
+                <div class="feature-card">
+                    <div class="icon">🔌</div>
+                    <h3>Auto-Detect</h3>
+                    <p>Works with physical devices and emulators. Dims gracefully when nothing is connected.</p>
+                </div>
+                <div class="feature-card">
+                    <div class="icon">🛠️</div>
+                    <h3>Developer-First</h3>
+                    <p>Show taps, layout bounds, stay awake — the dev toggles you reach for every day.</p>
+                </div>
+            </div>
+        </section>
+
+        <section class="controls">
+            <h2>All Controls</h2>
+            <p class="controls-subtitle">Everything you need, nothing you don't.</p>
+            <div class="control-columns">
+                <div class="control-group">
+                    <h3>Toggles</h3>
+                    <ul>
+                        <li><span class="ci">🌙</span> Dark / Light Mode</li>
+                        <li><span class="ci">📶</span> Wi-Fi</li>
+                        <li><span class="ci">ᛒ</span> Bluetooth</li>
+                        <li><span class="ci">🔄</span> Auto-Rotate</li>
+                        <li><span class="ci">👆</span> Show Taps</li>
+                        <li><span class="ci">⚡</span> Stay Awake</li>
+                        <li><span class="ci">🔕</span> Do Not Disturb</li>
+                        <li><span class="ci">📍</span> Location</li>
+                        <li><span class="ci">▢</span> Layout Bounds</li>
+                    </ul>
+                </div>
+                <div class="control-group">
+                    <h3>Actions</h3>
+                    <ul>
+                        <li><span class="ci">📸</span> Screenshot to Desktop</li>
+                        <li><span class="ci">⚙</span> Open Settings</li>
+                        <li><span class="ci">🔒</span> Lock Screen</li>
+                        <li><span class="ci">🏠</span> Home</li>
+                        <li><span class="ci">◂</span> Back</li>
+                        <li><span class="ci">☷</span> Recent Apps</li>
+                        <li><span class="ci">↻</span> Reboot Device</li>
+                    </ul>
+                </div>
+            </div>
+        </section>
+
+        <section class="requirements">
+            <h2>Requirements</h2>
+            <div class="req-pills">
+                <span class="req-pill">macOS 26+</span>
+                <span class="req-pill">ADB installed</span>
+                <span class="req-pill">Android device or emulator</span>
+            </div>
+        </section>
+    </div>
+
+    <footer>
+        <div class="container">
+            <p>Built with SwiftUI &amp; Liquid Glass &mdash; <a href="https://github.com/kihaki/fren">GitHub</a></p>
+        </div>
+    </footer>
+</body>
+</html>
