@@ -1,0 +1,43 @@
+name: Release
+
+on:
+  push:
+    tags:
+      - 'v*'
+
+jobs:
+  build:
+    runs-on: macos-26
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Build
+        run: |
+          xcodebuild -scheme Fren -configuration Release \
+            -derivedDataPath build \
+            CODE_SIGN_IDENTITY="-" \
+            CODE_SIGNING_REQUIRED=NO \
+            CODE_SIGNING_ALLOWED=NO
+
+      - name: Create DMG
+        run: |
+          APP_PATH="build/Build/Products/Release/Fren.app"
+          DMG_NAME="Fren-${GITHUB_REF_NAME}.dmg"
+
+          mkdir -p dmg_staging
+          cp -R "$APP_PATH" dmg_staging/
+          ln -s /Applications dmg_staging/Applications
+
+          hdiutil create -volname "Fren" \
+            -srcfolder dmg_staging \
+            -ov -format UDZO \
+            "$DMG_NAME"
+
+      - name: Create GitHub Release
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          DMG_NAME="Fren-${GITHUB_REF_NAME}.dmg"
+          gh release create "$GITHUB_REF_NAME" "$DMG_NAME" \
+            --title "Fren $GITHUB_REF_NAME" \
+            --generate-notes
